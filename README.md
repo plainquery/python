@@ -1,58 +1,51 @@
-# Getting Started
 
-Follow the instructions below to get started.
-
-```bash
-echo "Hello, world!"
-```
-
-# Introduction
-
-This is the intro text.
-
-```python
-print("Hello World!")
-```
-
-
-# Welcome to the Project
-
-This project is an example of parsing Markdown with custom Python scripts.
-
-## Installation
-
-To install the application, run the following command:
+To prevent Bash from treating the `!` as the start of a history expansion, you can either escape it with a backslash in the double-quoted SQL-like string or use single quotes around the SQL-like string and double quotes inside the values, like so:
 
 ```bash
-pip install -r requirements.txt
+python3 writer.py 'INSERT INTO '\''README.md'\'' (HeaderName, Content, CodeblockContent, CodeblockType) VALUES ('\''Introduction'\'', '\''This is the intro text.'\'', '\''print("Hello World!")'\'', '\''python'\'')'
 ```
 
 
+1. Create a file with the SQL-like statement, let's name it `query.txt`:
 
+```txt
+INSERT INTO 'README.md' (HeaderName, Content, CodeblockContent, CodeblockType) VALUES ('Introduction', 'This is the intro text.', 'print("Hello World!")', 'python')
+```
 
-# Getting Started
-Follow the instructions below to get started.
+2. Use the `$(<filename)` Bash syntax to pass the content of `query.txt` to `writer.py`:
+
 ```bash
-echo "Hello, world!"
-```
-## Usage
-
-After installation, you can start the application using:
-
-```python
-python app.py
+python3 writer.py "$(cat test.sql)"
 ```
 
-Make sure you have the necessary permissions.
 
-# config.yml
-database: 'path/to/database.db'
-server:
-  host: 'localhost'
-  port: 8080
+
+
+Now the script can handle the following use cases:
+
+1. `SELECT header FROM 'README.md' WHERE header='*Configuration*'`: This will print headers that include the word "Configuration".
+2. `COUNT header FROM 'README.md'`: This will print the count of unique headers.
+3. `SELECT codeblock FROM 'README.md' WHERE header='*Configuration*'`: This will print the first line from all codeblocks under headers that include the word "Configuration".
+
+Run the script with the desired SQL-like query:
+
+```shell
+python3 query.py "SELECT codeblock FROM 'README.md' WHERE header='*Configuration*'"
 ```
 
-# This command will print all code blocks without the "```" fences
+Note that the WHERE clause uses asterisks (`*`) as wildcards for pattern matching and it is applied case-insensitively. The COUNT command only supports counting headers and assumes that headers are unique per Markdown file (no repeated headers with the same text).
+
+The patterns used for regex matching and the overall script structure are simplified to demonstrate the concept. In a production environment, you would need to implement more robust error handling and potentially a more sophisticated parsing system to handle complex SQL-like queries and Markdown structures.
+
+
+
+
+## Test
+
+
+You can test this script by running the following commands:
+
+```shell
 python3 query.py "SELECT codeblock FROM 'README.md'"
 
 # This command should print all headers in 'README.md'
@@ -60,6 +53,10 @@ python3 query.py "SELECT header FROM 'README.md'"
 
 # This command should print the number of headers in 'README.md'
 python3 query.py "COUNT header FROM 'README.md'"
+
+# This command should print code blocks under headers with "Configuration" in the title
+python3 query.py "SELECT codeblock FROM 'README.md' WHERE header='*Configuration*'"
+```
 
 # Introduction
 
@@ -83,3 +80,134 @@ python3 writer.py "INSERT INTO 'README.md' (HeaderName, Content, CodeblockConten
 ```
 
 This update will search for the header named "Introduction" in the `README.md` file and insert the new section just beneath it. If the header is not found, it appends the section to the end of the file. If no `WHERE` clause is provided, the section will be inserted at the beginning as per the default behavior.
+
+
+Section inserted successfully into README.md!
+```bash
+python3 writer.py 'INSERT INTO '\''README.md'\'' (HeaderName, Content, CodeblockContent, CodeblockType) VALUES ('\''Introduction'\'', '\''This is the intro text.'\'', '\''print("Hello World!")'\'', '\''python'\'') WHERE HeaderName="Introduction"' 
+Query Error: Invalid SQL-like query format.
+```
+
+```bash
+python3 writer.py 'INSERT INTO '\''README.md'\'' (HeaderName, Content, CodeblockContent, CodeblockType) VALUES ('\''Introduction'\'', '\''This is the intro text.'\'', '\''print("Hello World!")'\'', '\''python'\'') WHERE HeaderName='\''Introduction'\'' ' 
+Query Error: Invalid SQL-like query format.
+```
+
+```bash
+python3 writer.py 'INSERT INTO '\''README.md'\'' (HeaderName, Content, CodeblockContent, CodeblockType) VALUES ('\''Introduction'\'', '\''This is the intro text.'\'', '\''print("Hello World!")'\'', '\''python'\'') WHERE HeaderName='\''Introduction'\'' ' 
+Query Error: Invalid SQL-like query format.
+```
+
+```bash
+python3 writer.py "INSERT INTO 'README.md' (HeaderName, Content, CodeblockContent, CodeblockType) VALUES ('New Section Header', 'Section content goes here.', 'print(\"Hello World\")', 'python') WHERE HeaderName='Introduction'"
+Inserting under a specific header is not supported in this script.
+```
+
+```bash
+nano test.sql
+```
+
+```bash
+python3 writer.py "$(cat test.sql)"
+Inserting under a specific header is not supported in this script.
+```
+
+```bash
+python3 writer.py "$(cat test.sql)"
+Section inserted successfully into README.md!
+```
+
+```bash
+python3 writer.py "$(cat test.sql)"
+Inserting under a specific header is not supported in this script.
+```
+
+```bash
+python3 writer.py "$(cat test.sql)"
+Section inserted successfully under header 'Installation' in README.md!
+```
+
+```bash
+python3 deleter.py "DELETE FROM 'README.md' WHERE HeaderName='Introduction'"
+Section with header 'Introduction' deleted successfully from 'README.md'.
+```
+
+```bash
+python3 deleter.py "DELETE FROM 'README.md' WHERE HeaderName='Installation'"
+Section with header 'Installation' deleted successfully from 'README.md'.
+```
+
+```bash
+python3 deleter.py "DELETE FROM 'README.md' WHERE HeaderName='Configuration'"
+Section with header 'Configuration' deleted successfully from 'README.md'.
+```
+
+```bash
+python3 deleter.py "DELETE FROM 'README.md' WHERE HeaderName='Configuration'"
+No section with header 'Configuration' was found in 'README.md'.
+```
+
+
+```bash
+python3 deleter.py "DELETE FROM 'README.md' WHERE HeaderName='Upgraded'"
+No section with header 'Upgraded' was found in 'README.md'.
+```
+
+
+```bash
+python3 deleter.py "DELETE FROM 'README.md' WHERE HeaderName='Test'"
+No section with header 'Test' was found in 'README.md'.
+```
+
+
+```bash
+python3 deleter.py "DELETE FROM 'README.md' WHERE HeaderName='*Test*'"
+No section with header '*Test*' was found in 'README.md'.
+```
+
+
+```bash
+python3 deleter.py "DELETE FROM 'README.md' WHERE HeaderName='*Test*'"
+Section matching header pattern '.*Test.*' deleted successfully from 'README.md'.
+```
+
+
+```bash
+cat README.md
+```
+
+```bash
+python3 deleter.py "DELETE FROM 'README.md' WHERE HeaderName='*Test*'"
+No headers found with pattern '*Test*'. Nothing was deleted.
+```
+
+```bash
+python3 deleter.py "DELETE FROM 'README.md' WHERE HeaderName='*Test*'"
+Header(s) with the pattern '*Test*' deleted successfully.
+```
+
+```bash
+python3 deleter.py "DELETE FROM 'README.md' WHERE HeaderName='*Test*'"
+Section with header matching pattern '.*Test.*' deleted successfully.
+```
+
+
+```bash
+python3 deleter.py "DELETE FROM 'README.md' WHERE HeaderName='*Contr*'"
+Section with header matching pattern '.*Contr.*' deleted successfully.
+```
+
+```bash
+python3 deleter.py "DELETE FROM 'README.md' WHERE HeaderName='Conf*'"
+No section with header matching pattern 'Conf.*' was found.
+```
+
+```bash
+python3 deleter.py "DELETE FROM 'README.md' WHERE HeaderName='Conf*'"
+No section with header matching pattern 'Conf.*' was found.
+```
+
+```bash
+python3 deleter.py "DELETE FROM 'README.md' WHERE HeaderName='*Conf*'"
+Section with header matching pattern '.*Conf.*' deleted successfully.
+```
