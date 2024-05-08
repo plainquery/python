@@ -1,0 +1,58 @@
+#!/usr/bin/python3
+
+import subprocess
+
+"""
+This Python script incorporates functionality to automatically detect the package manager and adjust the installation command accordingly. Each `RUN` command from a Dockerfile that involves installing packages using `apt-get` or `apt` will be replaced with the appropriate command using `yum` or `dnf`.
+"""
+def detect_package_manager():
+    """Detect system's package manager."""
+    try:
+        subprocess.run(['apt', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        return 'apt'
+    except subprocess.CalledProcessError:
+        try:
+            subprocess.run(['dnf', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            return 'dnf'
+        except subprocess.CalledProcessError:
+            try:
+                subprocess.run(['yum', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                return 'yum'
+            except subprocess.CalledProcessError:
+                raise RuntimeError("No supported package manager found (apt, yum, dnf).")
+
+def translate_command(command, package_manager):
+    """Translate apt-get or apt install commands to the detected package manager."""
+    if 'apt-get install' in command or 'apt install' in command:
+        new_command = command.replace('apt-get install', f'{package_manager} install', 1).replace('apt install', f'{package_manager} install', 1)
+        return new_command
+    return command
+
+def execute_command(command):
+    """ Execute a shell command and capture the output """
+    print(f"Executing command: {command}")
+    try:
+        result = subprocess.run(command, shell=True, check=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print('Success:\n', result.stdout)
+    except subprocess.CalledProcessError as e:
+        print('An error occurred:\n', e.stderr)
+
+def main():
+    package_manager = detect_package_manager()
+    dockerfile_path = 'Dockerfile'  # Path to Dockerfile
+
+    try:
+        with open(dockerfile_path, 'r') as file:
+            for line in file:
+                line = line.strip()
+                if line.startswith('RUN'):
+                    command = line[3:].strip()
+                    command = translate_command(command, package_manager)
+                    execute_command(command)
+    except FileNotFoundError:
+        print(f"The file {dockerfile_path} was not found.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+if __name__ == "__main__":
+    main()
