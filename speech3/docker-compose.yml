@@ -1,0 +1,47 @@
+version: '3'
+
+services:
+
+  python_app:
+    build:
+      context: .
+      dockerfile: ./volume/Dockerfile
+    volumes:
+      #- .:/app
+      #- .:/app
+      - volume_app:/app
+      #- ./volume:/data
+
+
+  speech_recognition:
+    build:
+      context: .
+      dockerfile: ./service/Dockerfile
+    volumes:
+      - volume_app:/app
+      - ./data:/data  # Może być używane do przechowywania danych
+    ports:
+      - "5000:5000"
+    environment:
+      - MODE=production
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:5000" ]
+      interval: 1m30s
+      timeout: 30s
+      retries: 3
+    networks:
+      - net1
+    depends_on:
+      - python_app
+
+volumes:
+  volume_app:
+    driver: local
+
+
+networks:
+  net1:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: "172.21.0.0/26"

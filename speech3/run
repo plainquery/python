@@ -1,25 +1,54 @@
 #!/usr/bin/python3
 
 import subprocess
+import platform
 
 """
 This Python script incorporates functionality to automatically detect the package manager and adjust the installation command accordingly. Each `RUN` command from a Dockerfile that involves installing packages using `apt-get` or `apt` will be replaced with the appropriate command using `yum` or `dnf`.
 """
 def detect_package_manager():
-    """Detect system's package manager."""
+    """Detect system's package manager by checking common ones iteratively."""
+    # Trying 'dnf' first, common in newer Fedora/RHEL systems
     try:
-        subprocess.run(['apt', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-        return 'apt'
+        subprocess.run(['dnf', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        return 'dnf'
     except subprocess.CalledProcessError:
+        # If 'dnf' isn't found or fails, try 'yum', common in older RHEL systems
         try:
-            subprocess.run(['dnf', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-            return 'dnf'
+            subprocess.run(['yum', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            return 'yum'
         except subprocess.CalledProcessError:
+            # Finally, try 'apt', in case it's a Debian-based system
             try:
-                subprocess.run(['yum', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-                return 'yum'
+                subprocess.run(['apt', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                return 'apt'
             except subprocess.CalledProcessError:
-                raise RuntimeError("No supported package manager found (apt, yum, dnf).")
+                raise RuntimeError("No supported package manager found (dnf, yum, apt).")
+
+
+
+def detect_os():
+    """Detect the operating system type to determine relevant command tags."""
+    if 'fedora' in platform.platform().lower() or 'centos' in platform.platform().lower():
+        return 'fedora'
+    elif 'ubuntu' in platform.platform().lower() or 'debian' in platform.platform().lower():
+        return 'debian'
+    else:
+        return None
+
+
+def execute_command(command):
+    """ Execute a shell command with sudo and capture the output """
+    command = "sudo " + command
+    print(f"Executing command: {command}")
+    try:
+        result = subprocess.run(command, shell=True, check=True, text=True,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print('Success:\n', result.stdout)
+    except subprocess.CalledProcessError as e:
+        print('An error occurred:\n', e.stderr)
+
+
 
 def translate_command(command, package_manager):
     """Translate apt-get or apt install commands to the detected package manager."""
@@ -29,17 +58,43 @@ def translate_command(command, package_manager):
     return command
 
 def execute_command(command):
-    """ Execute a shell command and capture the output """
+    """Execute a shell command with sudo and capture the output."""
+    command = "sudo " + command  # Prepend sudo to the command
     print(f"Executing command: {command}")
     try:
+        # Ensure the command execution logs both stdout and stderr
         result = subprocess.run(command, shell=True, check=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print('Success:\n', result.stdout)
     except subprocess.CalledProcessError as e:
         print('An error occurred:\n', e.stderr)
 
-def main():
+
+def main(dockerfile_path='Dockerfile'):
     package_manager = detect_package_manager()
-    dockerfile_path = 'Dockerfile'  # Path to Dockerfile
+    os_type = detect_os()
+    dockerfile_path = 'Dockerfile'
+
+    try:
+        with open(dockerfile_path, 'r') as file:
+            for line in file:
+                line = line.strip()
+                script = f'#{os_type} run'
+                if line.lower().startswith(script):
+                    command = line[len(script):].strip()
+                    execute_command(command)
+                elif line.startswith('RUN'):
+                    command = line[3:].strip()
+                    command = translate_command(command, package_manager)
+                    execute_command(command)
+    except FileNotFoundError:
+        print(f"The file {dockerfile_path} was not found.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
+
+def main2(dockerfile_path = 'Dockerfile'):
+    package_manager = detect_package_manager()
 
     try:
         with open(dockerfile_path, 'r') as file:
@@ -55,4 +110,7 @@ def main():
         print(f"An error occurred: {e}")
 
 if __name__ == "__main__":
-    main()
+    dockerfile_path = 'Dockerfile'  # Path to Dockerfile
+    #package_manager = detect_package_manager()
+    #print(package_manager)
+    main(dockerfile_path)
